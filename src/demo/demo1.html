@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="utf-8">
+    <title>vue-demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js" type="text/javascript" charset="utf-8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@0.12.0/dist/axios.min.js" type="text/javascript"
+        charset="utf-8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.13.1/lodash.min.js" type="text/javascript"
+        charset="utf-8"></script>
+</head>
+
+<body>
+    <div id="app">
+        <p>vue基本语法</p>
+        <ol>
+            <li>
+                <p>双向绑定练习：v-bind & v-model</p>
+                <input v-model="message" />
+                <span v-bind:title="nowTime">{{ message }}</span>
+            </li>
+            <li>
+                <p>函数和条件练习：v-on & v-if</p>
+                <button v-on:click="showMessageFn">{{ showMessage?'隐藏':'展示' }}</button>
+                <span v-if="showMessage">{{ message }}</span>
+            </li>
+            <li>
+                <p>循环练习：v-for</p>
+                <div v-for="element in elements">
+                    {{ element.id }}: {{ element.name }} <img v-bind:src="element.img" />
+                </div>
+            </li>
+            <li>
+                <p>组件练习：component & props & $emit <mark>(点击图标)</mark></p>
+                <pokemon-select v-for="element in elements" v-bind:pokemon="element"
+                    v-on:pokemon-select-emit="selectEmit"></pokemon-select>
+                <img v-bind:src="selectElenemt.img" style="display: block;width: 90px;height: 90px;" />
+            </li>
+            <li>
+                <p>缩写和计算属性练习：':' == v-bind & '@' == v-on & computed <mark>(点击图标)</mark></p>
+                <pokemon-select v-for="element in elements" :pokemon="element" @pokemon-select-emit="selectEmit">
+                </pokemon-select>
+                <p>中文名：{{ selectElenemt.name }}</p>
+                <p>原名：{{ outputOriginName }}</p>
+            </li>
+            <li>
+                <p>监听和异步请求练习：watch & ajax</p>
+                <span>输入任意字符随机请求图片：</span><input v-model="requestMessage" />
+                <p v-if="responseMessage.indexOf('pokemon') === -1" style="height: 300px;"><span> {{ responseMessage }}
+                    </span></p>
+                <img v-if="responseMessage.indexOf('pokemon') > -1" :src="responseMessage" style="display: block;" />
+            </li>
+        </ol>
+    </div>
+    <script type="text/javascript">
+
+        Vue.component('pokemon-select', {
+            props: ['pokemon'],
+            template: `<img v-bind:src="pokemon.img" @click="$emit('pokemon-select-emit', pokemon)" style="cursor: pointer;"/>`
+        })
+
+        var app = new Vue({
+            el: '#app',
+            data: {
+                message: 'Hello Vue!',
+                nowTime: `NowTime: ${new Date().toLocaleString()}`,
+                showMessage: false,
+                elements: [{
+                    id: '001',
+                    name: '妙蛙种子',
+                    img: '../assets/pokemon/bulbasaur.png'
+                },
+                {
+                    id: '002',
+                    name: '妙蛙草',
+                    img: '../assets/pokemon/ivysaur.png'
+                },
+                {
+                    id: '003',
+                    name: '妙蛙花',
+                    img: '../assets/pokemon/venusaur.png'
+                }],
+                selectElenemt: {
+                    id: '000',
+                    name: '精灵球',
+                    img: '../assets/pokemon/poke-ball-large.png'
+                },
+                requestMessage: '',
+                responseMessage: ''
+            },
+            watch: {
+                requestMessage: function (newQuestion, oldQuestion) {
+                    this.responseMessage = 'loading...';
+                    this.debouncedGetAnswer();
+                }
+            },
+            created: function () {
+                // `_.debounce` 是一个通过 Lodash 限制操作频率的函数。
+                // 在这个例子中，我们希望限制访问 yesno.wtf/api 的频率
+                // AJAX 请求直到用户输入完毕才会发出。想要了解更多关于
+                // `_.debounce` 函数 (及其近亲 `_.throttle`) 的知识，
+                // 请参考：https://lodash.com/docs#debounce
+                this.debouncedGetAnswer = _.debounce(this.getAnswer, 500)
+            },
+            methods: {
+                showMessageFn: function () {
+                    this.showMessage = !this.showMessage;
+                },
+                selectEmit: function (data) {
+                    this.selectElenemt = JSON.parse(JSON.stringify(data));
+                    this.selectElenemt.img = this.getLargeImg(this.selectElenemt.img);
+                },
+                randomImage: function () {
+                    return this.elements[Math.floor(Math.random() * Math.floor(3))].img;
+                },
+                getLargeImg: function (img) {
+                    return `${img.split('.png')[0]}-large.png`
+                },
+                getAnswer: function () {
+                    this.responseMessage = 'sending...';
+                    let vm = this;
+                    axios.get('https://yesno.wtf/api')
+                        .then(function (response) {
+                            vm.responseMessage = vm.getLargeImg(vm.randomImage());
+                        })
+                        .catch(function (error) {
+                            vm.responseMessage = 'Error! Could not reach the API. ' + error
+                        })
+                }
+            },
+            computed: {
+                outputOriginName: function () {
+                    return this.selectElenemt.img.split('-large.png')[0].split('../assets/pokemon/')[1];
+                }
+            },
+        })
+
+    </script>
+</body>
